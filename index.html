@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>【秦徹生日慶典】獵人集點密令</title>
+    <style>
+        :root {
+            --primary-red: #a30000;
+            --deep-black: #0d0d0d;
+            --gold: #d4af37;
+            --text-gray: #e0e0e0;
+        }
+
+        body {
+            background-color: var(--deep-black);
+            color: var(--text-gray);
+            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #game-container {
+            width: 85%;
+            max-width: 400px;
+            background: linear-gradient(145deg, #151515, #0a0a0a);
+            border: 1px solid var(--primary-red);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 0 40px rgba(163, 0, 0, 0.4);
+            text-align: center;
+            position: relative;
+        }
+
+        h1 { color: var(--gold); font-size: 1.4rem; margin-bottom: 5px; letter-spacing: 1px; }
+        .subtitle { font-size: 0.8rem; color: #888; margin-bottom: 25px; }
+
+        .stamp-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .stamp-slot {
+            aspect-ratio: 1/1;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            color: #222;
+            transition: all 0.5s ease;
+        }
+
+        .stamp-slot.active {
+            border: 1.5px solid var(--gold);
+            color: var(--primary-red);
+            background: rgba(212, 175, 55, 0.1);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .input-box input {
+            width: 85%;
+            padding: 12px;
+            background: #000;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 15px;
+            outline: none;
+        }
+
+        button {
+            background: var(--primary-red);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 8px;
+            width: 100%;
+        }
+
+        #final-msg {
+            display: none;
+            padding: 20px;
+            border: 2px solid var(--gold);
+            background: rgba(163, 0, 0, 0.1);
+            border-radius: 15px;
+        }
+
+        .secret-code {
+            font-size: 1.5rem;
+            color: var(--gold);
+            font-weight: bold;
+            display: block;
+            margin: 15px 0;
+        }
+
+        /* 重設按鈕 - 僅供測試用，隱藏在右下角 */
+        #reset-btn {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: none;
+            border: none;
+            color: #222;
+            font-size: 0.6rem;
+            width: auto;
+            padding: 5px;
+        }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="main-game">
+        <h1>Sylus Mission Log</h1>
+        <p class="subtitle">進度已自動同步至終端</p>
+
+        <div class="stamp-grid" id="stamp-grid">
+            </div>
+
+        <div class="input-box" id="input-section">
+            <input type="text" id="keyword-input" placeholder="請輸入獲取的關鍵字">
+            <button onclick="checkKeyword()">確認回報</button>
+            <p style="font-size: 0.75rem; color: #666; margin-top: 15px;">目前情報完整度: <span id="count" style="color:var(--gold)">0</span> / 8</p>
+        </div>
+    </div>
+
+    <div id="final-msg">
+        <h2 style="color: var(--gold);">情報解鎖成功</h2>
+        <div style="color: #fff; line-height: 1.8;">
+            找到「風臨野」並跟她說：<br>
+            <span class="secret-code">沙瓦尼卡 說三次</span>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--primary-red); font-weight: bold;">( 即可領取生日活動小禮物 )</p>
+    </div>
+
+    <button id="reset-btn" onclick="resetProgress()">重置進度(測試用)</button>
+</div>
+
+<script>
+    const correctAnswers = ["109", "24.5", "190", "0418", "風臨野", "潛入夜", "銀翼惡魔", "龍"];
+    // 從瀏覽器存儲讀取進度，若無則設為空陣列
+    let foundAnswers = JSON.parse(localStorage.getItem('sylus_game_progress')) || [];
+
+    // 初始化網頁
+    function init() {
+        const grid = document.getElementById('stamp-grid');
+        grid.innerHTML = ''; // 清空
+        
+        correctAnswers.forEach((ans, index) => {
+            const slot = document.createElement('div');
+            slot.className = 'stamp-slot';
+            slot.id = `slot-${index}`;
+            
+            // 如果進度裡有這題，直接點亮
+            if (foundAnswers.includes(ans)) {
+                slot.innerText = "◈";
+                slot.classList.add('active');
+            } else {
+                slot.innerText = "?";
+            }
+            grid.appendChild(slot);
+        });
+
+        document.getElementById('count').innerText = foundAnswers.length;
+
+        if (foundAnswers.length === 8) {
+            showFinal();
+        }
+    }
+
+    function checkKeyword() {
+        const input = document.getElementById('keyword-input');
+        const val = input.value.trim();
+        
+        if (correctAnswers.includes(val)) {
+            if (foundAnswers.includes(val)) {
+                alert("此項情報已記錄在案。");
+            } else {
+                foundAnswers.push(val);
+                // 儲存到 localStorage
+                localStorage.setItem('sylus_game_progress', JSON.stringify(foundAnswers));
+                
+                updateUI(val);
+                
+                if (foundAnswers.length === 8) {
+                    setTimeout(showFinal, 600);
+                }
+            }
+            input.value = ""; 
+        } else {
+            alert("指令錯誤。");
+        }
+    }
+
+    function updateUI(val) {
+        const index = correctAnswers.indexOf(val);
+        const slot = document.getElementById(`slot-${index}`);
+        slot.innerText = "◈";
+        slot.classList.add('active');
+        document.getElementById('count').innerText = foundAnswers.length;
+    }
+
+    function showFinal() {
+        document.getElementById('main-game').classList.add('hidden');
+        document.getElementById('final-msg').style.display = 'block';
+    }
+
+    // 測試用：清除所有進度
+    function resetProgress() {
+        if(confirm("確定要重置所有進度嗎？")){
+            localStorage.removeItem('sylus_game_progress');
+            location.reload();
+        }
+    }
+
+    // 啟動
+    init();
+</script>
+
+</body>
+</html>
